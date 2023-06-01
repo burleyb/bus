@@ -4,19 +4,13 @@ module.exports = {
 	publish: [{
 		leoaws: {
 			profile: 'leo',
-			region: 'us-west-2'
-		},
-		public: true,
-	}, {
-		leoaws: {
-			profile: 'leo',
 			region: 'us-east-1'
 		},
-		public: true,
+		public: true
 	}],
 	deploy: {
-		dev: {
-			stack: 'DevBus',
+		DEV: {
+			stack: 'LeoPlatformV2-Bus-WJHM1F32629G',
 			parameters: {
 				TrustedAWSPrinciples: '',
 				QueueReplicationDestinationLeoBotRoleARNs: '',
@@ -24,12 +18,12 @@ module.exports = {
 			},
 			region: 'us-east-1'
 		},
-		test: {
-			stack: 'TestBus',
+		PROD: {
+			stack: 'LeoProdV2-Bus-11Y73AXJQ91',
 			parameters: {
 				TrustedAWSPrinciples: '',
-				QueueReplicationDestinationLeoBotRoleARNs: 'arn:aws:iam::111111111111:role/DevBus-LeoBotRole-AAAAAAAAAAAA',
-				QueueReplicationMapping: '["dim"]'
+				QueueReplicationDestinationLeoBotRoleARNs: '',
+				QueueReplicationMapping: '[]'
 			},
 			region: 'us-east-1'
 		}

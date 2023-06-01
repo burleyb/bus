@@ -25,35 +25,30 @@ module.exports = {
 		},
 
 		KinesisStreamProcessorMemory: {
-			Group: "Lambda Configuration",
 			Type: "Number",
 			Default: 640,
 			MinValue: 128,
 			MaxValue: 10240
 		},
 		FirehoseStreamProcessorMemory: {
-			Group: "Lambda Configuration",
 			Type: "Number",
 			Default: 640,
 			MinValue: 128,
 			MaxValue: 10240
 		},
 		CronProcessorMemory: {
-			Group: "Lambda Configuration",
 			Type: "Number",
 			Default: 256,
 			MinValue: 128,
 			MaxValue: 10240
 		},
 		EventTriggerMemory: {
-			Group: "Lambda Configuration",
 			Type: "Number",
 			Default: 128,
 			MinValue: 128,
 			MaxValue: 10240
 		},
 		LeoMonitorMemory: {
-			Group: "Lambda Configuration",
 			Type: "Number",
 			Default: 256,
 			MinValue: 128,
