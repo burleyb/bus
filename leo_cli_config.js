@@ -10,7 +10,7 @@ module.exports = {
 	}],
 	deploy: {
 		DEV: {
-			stack: 'LeoPlatformV2-Bus-WJHM1F32629G',
+			stack: 'LeoDevV2-Bus',
 			parameters: {
 				TrustedAWSPrinciples: '',
 				QueueReplicationDestinationLeoBotRoleARNs: '',
