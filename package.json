@@ -34,10 +34,13 @@
 		"deep-diff": "1.0.2",
 		"leo-cron": "^2.0.1",
 		"leo-logger": "1.0.1",
-		"leo-sdk": "^6.0.0",
+		"leo-sdk": "file:../smartshyp-deps/leo-sdk",
 		"moment": "2.24.0"
 	},
 	"devDependencies": {
+		"@babel/plugin-proposal-export-namespace-from": "^7.18.9",
+		"@babel/plugin-proposal-function-bind": "^7.22.5",
+		"@babel/plugin-transform-modules-commonjs": "^7.22.5",
 		"ajv": "8.11.0",
 		"ajv-formats": "2.1.1",
 		"aws-sdk": "^2.466.0",

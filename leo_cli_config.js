@@ -19,7 +19,7 @@ module.exports = {
 			region: 'us-east-1'
 		},
 		PROD: {
-			stack: 'LeoProdV2-Bus-11Y73AXJQ91',
+			stack: 'LeoProdV2-Bus-11Y73AXJQ91CA',
 			parameters: {
 				TrustedAWSPrinciples: '',
 				QueueReplicationDestinationLeoBotRoleARNs: '',
