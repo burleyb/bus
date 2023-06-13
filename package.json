@@ -32,9 +32,10 @@
 	"dependencies": {
 		"babelify": "^10.0.0",
 		"deep-diff": "1.0.2",
-		"leo-cron": "^2.0.1",
+		"leo-cron": "file:../smartshyp-deps/leo-cron",
 		"leo-logger": "1.0.1",
 		"leo-sdk": "file:../smartshyp-deps/leo-sdk",
+		"leo-aws": "file:../smartshyp-deps/leo-aws",
 		"moment": "2.24.0"
 	},
 	"overrides": {
@@ -51,7 +52,6 @@
 		"chai": "^4.2.0",
 		"extend": "^3.0.2",
 		"is-semver": "1.0.11",
-		"leo-aws": "1.4.4",
 		"mocha": "^6.1.4",
 		"proxyquire": "^2.1.1",
 		"sinon": "^7.3.2"
