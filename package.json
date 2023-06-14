@@ -39,7 +39,9 @@
 		"moment": "2.24.0"
 	},
 	"overrides": {
-		"leo-sdk": "file:../smartshyp-deps/leo-sdk"
+		"leo-sdk": "file:../smartshyp-deps/leo-sdk",
+		"leo-aws": "file:../smartshyp-deps/leo-aws",
+		"leo-cron": "file:../smartshyp-deps/leo-cron"
 	},
 	"devDependencies": {
 		"@babel/plugin-proposal-export-namespace-from": "^7.18.9",
