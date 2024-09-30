@@ -1,0 +1,21 @@
+{
+  "presets": [
+    [
+      "@babel/preset-env",
+      {
+        "targets": {
+          "node": "20"
+        },
+  			"modules": "auto",
+  			"useBuiltIns": "usage",
+  			"corejs": "3.38.1"
+  		}
+    ]
+  ],
+	"plugins": [
+	  "@babel/plugin-transform-export-namespace-from", 
+	  "@babel/plugin-transform-modules-commonjs", 
+	  "@babel/plugin-proposal-function-bind", 
+	  "@babel/plugin-transform-runtime",
+	 ]  
+}
