@@ -10,6 +10,7 @@
 	"config": {
 		"leo": {
 			"type": "bot",
+			"handler": "handler",
 			"memory": 256,
 			"timeout": 300,
 			"role": "SourceQueueReplicatorRole",

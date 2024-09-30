@@ -7,7 +7,7 @@ module.exports = {
 		},
 		"QueueReplicationDestinationLeoBotRoleARNs" : {
 			"Type" : "CommaDelimitedList",
-            "Default": "",
+            "Default": "[]",
 			"Description" : "List of LeoBotRole Arn's this stack will assume for replication. The AccountId and Stack of the first ARN become the default AccountId and Stack used when defining the QueueReplicationMapping."
 		},
 		"QueueReplicationMapping" : {
@@ -38,7 +38,8 @@ module.exports = {
 		}
 	},
 	Resources: {
-		"SourceQueueReplicator": { //NOTE: This is an extra condition for the bot. The remaining details will be added during the build.
+		"IsReplicatingStackCondition": { //NOTE: This is an extra condition for the bot. The remaining details will be added during the build.
+			"Type": "Custom::RegisterReplicationBots",
 			"Condition": "IsReplicatingStack"
 		},
 		"RegisterReplicationBots": {
@@ -59,7 +60,6 @@ module.exports = {
 		},
 		"SourceQueueReplicatorRole": {
 			"Type": "AWS::IAM::Role",
-			"Condition": "IsReplicatingStack",
 			"Properties": {
 				"AssumeRolePolicyDocument": {
 					"Version": "2012-10-17",
@@ -112,7 +112,10 @@ module.exports = {
 			"Description": "Leo Source Queue Replicator Bot",
 			"Condition": "IsReplicatingStack",
 			"Value": {
-				"Fn::Sub": "${SourceQueueReplicator.Arn}"
+				"Fn::GetAtt": [
+            		"SourceQueueReplicatorRole",
+            		"Arn"
+        		]
 			},
 			"Export": {
 				"Name": {
