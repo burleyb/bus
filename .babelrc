@@ -1,21 +1,29 @@
 {
   "presets": [
-    [
-      "@babel/preset-env",
-      {
-        "targets": {
-          "node": "20"
-        },
-  			"modules": "auto",
-  			"useBuiltIns": "usage",
-  			"corejs": "3.38.1"
-  		}
-    ]
+	[
+		"@babel/preset-env",
+		{
+			"targets": {
+				"node": "20"
+			},
+			"modules": "auto",
+			"sourceType": "unambiguous",
+			"useBuiltIns": "usage",
+			"corejs": {
+				"version": "3",
+				"proposals": true
+			}
+		}
+	  ]
   ],
 	"plugins": [
-	  "@babel/plugin-transform-export-namespace-from", 
-	  "@babel/plugin-transform-modules-commonjs", 
-	  "@babel/plugin-proposal-function-bind", 
-	  "@babel/plugin-transform-runtime",
+	["polyfill-corejs3", { "method": "usage-global", "version": "3" }],	
+	  ["@babel/plugin-transform-runtime",
+      {
+        "corejs": false,
+		"helpers": true,  // Enables runtime helper functions
+        "regenerator": true // Enables async/await transformations  
+      }
+    ]
 	 ]  
 }

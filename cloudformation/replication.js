@@ -60,6 +60,7 @@ module.exports = {
 		},
 		"SourceQueueReplicatorRole": {
 			"Type": "AWS::IAM::Role",
+			"Condition": "IsReplicatingStack",
 			"Properties": {
 				"AssumeRolePolicyDocument": {
 					"Version": "2012-10-17",

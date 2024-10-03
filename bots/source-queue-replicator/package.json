@@ -13,7 +13,7 @@
 			"handler": "handler",
 			"memory": 256,
 			"timeout": 300,
-			"role": "SourceQueueReplicatorRole",
+			"role": "ApiRole",
 			"env": {
 				"Resources": {
 					"Region": "${AWS::Region}",

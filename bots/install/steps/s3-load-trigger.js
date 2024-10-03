@@ -36,9 +36,10 @@ export default async function() {
   try {
     const data = await s3Client.send(new GetBucketNotificationConfigurationCommand({ Bucket: bucket }));
     logger.info(data);
-    const exists = data.LambdaFunctionConfigurations?.some(c => c.Id === "bus-events-upload");
+    const exists = data?.LambdaFunctionConfigurations?.some(c => c.Id === "bus-events-upload");
 
     if (!exists) {
+      if(!data.LambdaFunctionConfigurations) data.LambdaFunctionConfigurations = [];
       data.LambdaFunctionConfigurations.push({
         Id: "bus-events-upload",
         Events: ["s3:ObjectCreated:*"],
