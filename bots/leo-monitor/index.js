@@ -1,13 +1,14 @@
-'use strict';
-
-import { DynamoDBClient, Converter } from "@aws-sdk/client-dynamodb";
+import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
+import { DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb";
+import { unmarshall } from "@aws-sdk/util-dynamodb";
 import leo from "leo-sdk";
-import { handler as cronHandler } from "leo-sdk/wrappers/cron";
+import cron from "leo-sdk/wrappers/cron";
 
 const ID = "leo_cron_monitor";
-const dynamoDBClient = new DynamoDBClient({ region: "us-east-1" });
+const dynamoDBClient = new DynamoDBClient({ region: process.env.AWS_REGION });
+const docClient = DynamoDBDocumentClient.from(dynamoDBClient);
 
-export const handler = cronHandler(async (event, context) => {
+const botHandler = async (event, context) => {
   const loader = leo.load(ID, "monitor", { partitionHashKey: process.env.SHARD_HASH_KEY });
   const promises = event.Records.map(async (record) => {
     const now = record.dynamodb.ApproximateCreationDateTime * 1000;
@@ -15,10 +16,10 @@ export const handler = cronHandler(async (event, context) => {
     let oldImage = { trigger: 0, invokeTime: 0 };
 
     if ("NewImage" in record.dynamodb) {
-      newImage = Converter.unmarshall(record.dynamodb.NewImage);
+      newImage = unmarshall(record.dynamodb.NewImage);
     }
     if ("OldImage" in record.dynamodb) {
-      oldImage = Converter.unmarshall(record.dynamodb.OldImage);
+      oldImage = unmarshall(record.dynamodb.OldImage);
     }
 
     if (newImage.id === ID || newImage.ignoreMonitor === true) {
@@ -94,4 +95,6 @@ export const handler = cronHandler(async (event, context) => {
 
   await Promise.all(promises);
   await loader.end();
-});
+};
+
+export const handler = cron({}, botHandler);
