@@ -12,8 +12,9 @@
 		"setup": "setup",
 		"build": "leo-cli publish -s --force all --build",
 		"package": "leo-cli publish -s --force all",
-		"deploy:dev": "leo-cli publish -s -d dev --force all",
-		"deploy:test": "leo-cli publish -s -d test --force all"
+		"deploy:dev": "leo-cli publish -s -d DEV --force all",
+		"deploy:sandbox": "leo-cli publish -s -d SANDBOX --force all",
+		"deploy:prod": "leo-cli publish -s -d PROD --force all"
 	},
 	"repository": {
 		"type": "git",
@@ -47,7 +48,7 @@
 		"leo-sdk": "file:../leo-sdk",
 		"mocha": "^10.7.0",
 		"moment": "^2.30.1",
-		"sinon": "^18.0.0"
+		"sinon": "^19.0.2"
 	},
 	"overrides": {
 		"leo-sdk": "file:../leo-sdk",
