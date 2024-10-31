@@ -3,7 +3,7 @@
 module.exports = {
 	publish: [{
 		leoaws: {
-			profile: 'stealthoms',
+			profile: 'symmatiq',
 			region: 'us-east-1'
 		},
 		public: true
