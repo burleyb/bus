@@ -3,7 +3,7 @@
 module.exports = {
 	publish: [{
 		leoaws: {
-			profile: 'symmatiq',
+			profile: 'default',
 			region: 'us-east-1'
 		},
 		public: true
