@@ -10,7 +10,7 @@ module.exports = {
 	}],
 	deploy: {
 		DEV: {
-			stack: 'RstreamsDEV',
+			stack: 'LeoDevV2-Bus',
 			parameters: {
 				TrustedAWSPrinciples: '',
 				QueueReplicationDestinationLeoBotRoleARNs: '',
@@ -30,12 +30,12 @@ module.exports = {
 				LeoStreamBillingMode: 'PAY_PER_REQUEST',
 				LeoSystemBillingMode: 'PAY_PER_REQUEST',
 				MonitorShardHashKey: 0,
-				StreamTTLSeconds: 604800
+				StreamTTLSeconds: 604800				
 			},
 			region: 'us-east-1'
 		},
 		PROD: {
-			stack: 'RstreamsPROD',
+			stack: 'LeoProdV2-Bus-11Y73AXJQ91CA',
 			parameters: {
 				TrustedAWSPrinciples: '',
 				QueueReplicationDestinationLeoBotRoleARNs: '',
@@ -55,7 +55,7 @@ module.exports = {
 				LeoStreamBillingMode: 'PAY_PER_REQUEST',
 				LeoSystemBillingMode: 'PAY_PER_REQUEST',
 				MonitorShardHashKey: 0,
-				StreamTTLSeconds: 604800
+				StreamTTLSeconds: 604800				
 			},
 			region: 'us-east-1'
 		}

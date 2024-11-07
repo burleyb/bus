@@ -1,137 +1,169 @@
-import { DynamoDBClient, UpdateCommand, ScanCommand } from "@aws-sdk/client-dynamodb";
-import leo from "leo-sdk";
+"use strict";
+
+var leo = require("leo-sdk");
+var dynamodb = leo.aws.dynamodb;
+var configuration = leo.configuration;
+
+import { unmarshall } from "@aws-sdk/util-dynamodb";
+
 import moment from "moment";
+import async from "async";
 import refUtil from "leo-sdk/lib/reference.js";
 
-const dynamodb = leo.aws.dynamodb;
-const configuration = leo.configuration;
 
-const CRON_TABLE = configuration.resources.LeoCron;
-const MAX_CACHE_MILLISECONDS = 1000 * 10;
-let lastCacheTime = 0;
-let cache = null;
+var CRON_TABLE = configuration.resources.LeoCron;
+var MAX_CACHE_MILLISECONDS = 1000 * 10;
+var lastCacheTime = 0;
+var cache = null;
 
-const dynamoClient = new DynamoDBClient({ region: "us-east-1" });
-
-export const handler = async (event, context) => {
-  try {
-    const cronTable = await getCronTable();
-    const idsToTrigger = await getIdsToTrigger(cronTable, event.Records);
-    const result = await setTriggers(idsToTrigger);
-    console.log(`Triggered at time: ${result.time} for ids: ${JSON.stringify(result.data)}`);
-    return result;
-  } catch (error) {
-    console.error("Error:", error);
-    throw error;
-  }
+const handler = function(event, context, done) {
+	// var cnt = 0;
+	// var callback = done;
+	// done = function(){};
+	// var mm = setInterval(function(){
+	// 	if (cnt >= 1){
+	// 		callback();
+	// 		clearInterval(mm);
+	// 		return;
+	// 	}
+	// 	console.log("Running", ++cnt);
+	getCronTable()
+		.then(cronTable => getIdsToTrigger(cronTable, event.Records))
+		.then(setTriggers)
+		.then(function(result) {
+			console.log(`Triggered at time: ${result.time} for ids: ${JSON.stringify(result.data)}`);
+			done(null, result);
+		})
+		.catch(done);
+	//}, 500)
 };
 
-async function setTriggers(results) {
-  const now = moment.now();
+export default handler
+export { handler }
 
-  try {
-    await Promise.all(results.map(async (data) => {
-      console.log(`Setting Cron trigger for ${data.id}, ${now}`);
+function setTriggers(results) {
+	return new Promise((resolve, reject) => {
+		var now = moment.now();
 
-      const sets = ["#trigger = :trigger"];
-      const ean = {
-        "#requested_kinesis": "requested_kinesis",
-        "#trigger": "trigger"
-      };
-      const eav = {
-        ":trigger": moment.now()
-      };
+		async.eachLimit(results, 10, function(data, callback) {
+			console.log(`Setting Cron trigger for ${data.id}, ${now}`);
 
-      Object.keys(data.events).forEach((key, i) => {
-        const index = i + 1;
-        const event = data.events[key];
-        sets.push(`#requested_kinesis.#n_${index} = :v_${index}`);
-        ean[`#n_${index}`] = key;
-        eav[`:v_${index}`] = event;
-      });
+			var sets = ["#trigger = :trigger"];
+			var ean = {
+				"#requested_kinesis": "requested_kinesis",
+				"#trigger": "trigger"
+			};
+			var eav = {
+				":trigger": moment.now()
+			};
 
-      const command = new UpdateCommand({
-        TableName: CRON_TABLE,
-        Key: { id: data.id },
-        UpdateExpression: 'set ' + sets.join(", "),
-        ExpressionAttributeNames: ean,
-        ExpressionAttributeValues: eav,
-        ReturnConsumedCapacity: 'TOTAL'
-      });
+			var i = 0;
+			Object.keys(data.events).forEach(function(key) {
+				i++;
+				var event = data.events[key];
+				sets.push(`#requested_kinesis.#n_${i} = :v_${i}`);
+				ean[`#n_${i}`] = key;
+				eav[`:v_${i}`] = event;
+			});
 
-      await dynamoClient.send(command);
-    }));
+			var command = {
+				TableName: CRON_TABLE,
+				Key: {
+					id: data.id
+				},
+				UpdateExpression: 'set ' + sets.join(", "),
+				ExpressionAttributeNames: ean,
+				ExpressionAttributeValues: eav,
+				"ReturnConsumedCapacity": 'TOTAL'
+			};
 
-    return { data: results, time: now };
-  } catch (error) {
-    console.error(error);
-    throw error;
-  }
+			dynamodb.docClient.update(command, callback);
+		}, function(err) {
+			if (err) {
+				console.log(err);
+				reject(err);
+			} else {
+				resolve({
+					data: results,
+					time: now
+				});
+			}
+		});
+	});
 }
 
-async function getIdsToTrigger(cronTable, records) {
-  const idsToTrigger = {};
+function getIdsToTrigger(cronTable, records) {
+	var idsToTrigger = {};
+	records.forEach(record => {
+		if ("NewImage" in record.dynamodb) {
+			var newImage = unmarshall(record.dynamodb.NewImage);
+			var oldImage = record.dynamodb.OldImage && unmarshall(record.dynamodb.OldImage);
+			var event = refUtil.refId(newImage.event);
+			var newMax = max(newImage.kinesis_number, newImage.s3_kinesis_number, newImage.initial_kinesis_number, newImage.s3_new_kinesis_number, newImage.eid, newImage.max_eid);
+			var oldMax = oldImage && max(oldImage.kinesis_number, oldImage.s3_kinesis_number, oldImage.initial_kinesis_number, oldImage.s3_new_kinesis_number, oldImage.eid, oldImage.max_eid);
+			if (newMax != oldMax && event in cronTable) {
+				cronTable[event].forEach(id => {
+					idsToTrigger[id] = idsToTrigger[id] || {
+						id: id,
+						events: {}
+					};
+					idsToTrigger[id].events[event] = newMax;
+				});
+			}
+		}
+	});
 
-  records.forEach(record => {
-    if ("NewImage" in record.dynamodb) {
-      const newImage = DynamoDBClient.Converter.unmarshall(record.dynamodb.NewImage);
-      const oldImage = record.dynamodb.OldImage && DynamoDBClient.Converter.unmarshall(record.dynamodb.OldImage);
-      const event = refUtil.refId(newImage.event);
-      const newMax = max(newImage.kinesis_number, newImage.s3_kinesis_number, newImage.initial_kinesis_number, newImage.s3_new_kinesis_number, newImage.eid, newImage.max_eid);
-      const oldMax = oldImage && max(oldImage.kinesis_number, oldImage.s3_kinesis_number, oldImage.initial_kinesis_number, oldImage.s3_new_kinesis_number, oldImage.eid, oldImage.max_eid);
-      if (newMax != oldMax && event in cronTable) {
-        cronTable[event].forEach(id => {
-          idsToTrigger[id] = idsToTrigger[id] || { id: id, events: {} };
-          idsToTrigger[id].events[event] = newMax;
-        });
-      }
-    }
-  });
-
-  return idsToTrigger;
+	return idsToTrigger;
 }
 
 function max() {
-  let maxValue = arguments[0];
-  for (let i = 1; i < arguments.length; ++i) {
-    if (arguments[i] != null && arguments[i] != undefined) {
-      maxValue = maxValue > arguments[i] ? maxValue : arguments[i];
-    }
-  }
-  return maxValue;
+	var max = arguments[0];
+	for (var i = 1; i < arguments.length; ++i) {
+		if (arguments[i] != null && arguments[i] != undefined) {
+			max = max > arguments[i] ? max : arguments[i];
+		}
+	}
+	return max;
 }
 
-async function getCronTable() {
-  const now = moment.now();
-  if (!cache || lastCacheTime + MAX_CACHE_MILLISECONDS <= now) {
-    console.log("Looking up the Current Cron Table", now - lastCacheTime, MAX_CACHE_MILLISECONDS);
-    cache = {};
-    try {
-      const params = { TableName: CRON_TABLE };
-      const data = await dynamoClient.send(new ScanCommand(params));
+function getCronTable() {
+	return new Promise((resolve, reject) => {
 
-      data.Items.forEach(item => {
-        if (!item.archived && item.triggers) {
-          const triggers = item.triggers;
+		var now = moment.now();
+		if (!cache || lastCacheTime + MAX_CACHE_MILLISECONDS <= now) {
+			console.log("Looking up the Current Cron Table", now - lastCacheTime, MAX_CACHE_MILLISECONDS);
+			cache = {};
+			var params = {
+				TableName: CRON_TABLE
+			};
+			dynamodb.query(params, {
+				method: "scan",
+				mb: 10
+			}).then(function(data) {
+				data.Items.forEach(item => {
 
-          triggers.forEach(trigger => {
-            trigger = refUtil.refId(trigger);
-            if (!(trigger in cache)) {
-              cache[trigger] = [];
-            }
-            cache[trigger].push(item.id);
-          });
-        }
-      });
+					if (!item.archived && item.triggers) {
+						var triggers = item.triggers;
 
-      lastCacheTime = moment.now();
-      return cache;
-    } catch (err) {
-      console.error(err);
-      throw new Error("Unable to get Cron Table");
-    }
-  } else {
-    console.log("Getting Cron Table from cache");
-    return cache;
-  }
+						triggers.forEach(trigger => {
+							trigger = refUtil.refId(trigger);
+							if (!(trigger in cache)) {
+								cache[trigger] = [];
+							}
+							cache[trigger].push(item.id);
+						});
+
+					}
+				});
+				lastCacheTime = moment.now();
+				resolve(cache);
+			}).catch(function(err) {
+				console.log(err);
+				reject(err, "Unable to get Cron Table");
+			});
+		} else {
+			console.log("Getting Cron Table from cache");
+			resolve(cache);
+		}
+	});
 }

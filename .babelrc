@@ -10,7 +10,7 @@
 			"sourceType": "unambiguous",
 			"useBuiltIns": "usage",
 			"corejs": {
-				"version": "3",
+				"version": false,
 				"proposals": true
 			}
 		}
@@ -21,8 +21,8 @@
 	  ["@babel/plugin-transform-runtime",
       {
         "corejs": false,
-		"helpers": true,  // Enables runtime helper functions
-        "regenerator": true // Enables async/await transformations  
+				"helpers": true,  // Enables runtime helper functions
+        "regenerator": false // Enables async/await transformations  
       }
     ]
 	 ]  

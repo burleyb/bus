@@ -29,11 +29,13 @@
 			"role": "LeoCronRole",
 			"DependsOn": [
 				"LeoCron"
-			]
+			],
+			"build": {
+				"include": []
+			}			
 		}
 	},
 	"keywords": [],
 	"author": "",
-	"license": "ISC",
-	"dependencies": {}
+	"license": "ISC"
 }
