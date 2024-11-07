@@ -3,42 +3,34 @@
  * Creates and writes events to the queue 'api-queue-1'.
  * Reports that bot 'api-write-bot' is ending.
  */
-let aws = require("aws-sdk");
-let lambda = new aws.Lambda({
-	region: "us-west-2"
-});
-let lambdaFunctionName = "Staging-LeoBusApiProcessor-12A1GKXVBLJXL";
-let api = require("./apiHelper")(lambdaFunctionName, lambda);
+const { LambdaClient, InvokeCommand } = require("@aws-sdk/client-lambda");
+const apiHelper = require("./apiHelper");
+
+const lambdaClient = new LambdaClient({ region: "us-west-2" });
+const lambdaFunctionName = "Staging-LeoBusApiProcessor-12A1GKXVBLJXL";
+const api = apiHelper(lambdaFunctionName, lambdaClient);
 
 let id = "api-write-bot";
 let writeQueue = "api-queue-1";
 
-api.start(id, {
-	lock: true
-}, (err, startData) => {
-	if (err) {
-		console.log("Start error:", err);
-		return;
-	}
-	console.log("Start Data:", startData);
-	const events = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map(i => {
-		return {
+async function startBot() {
+	try {
+		const startData = await api.start(id, { lock: true });
+		console.log("Start Data:", startData);
+
+		const events = Array.from({ length: 10 }, (_, i) => ({
 			data: i,
-			now: Date.now()
-		};
-	});
-	api.write(id, writeQueue, events, (err, writeResponse) => {
-		if (err) {
-			console.log("Write Error:", err);
-			return; //done(err); // done undefined
-		}
+			now: Date.now(),
+		}));
+
+		const writeResponse = await api.write(id, writeQueue, events);
 		console.log("Write Data:", writeResponse);
-		api.end(id, err, startData.token, (err, endData) => {
-			if (err) {
-				console.log("End Error:", err);
-				return;
-			}
-			console.log("End Data", endData);
-		});
-	});
-});
+
+		const endData = await api.end(id, null, startData.token);
+		console.log("End Data", endData);
+	} catch (err) {
+		console.error("Error:", err);
+	}
+}
+
+startBot();

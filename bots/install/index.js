@@ -1,10 +1,10 @@
 "use strict";
 
-const registerBot = require("./steps/register.js");
-const s3LoadTrigger = require('./steps/s3-load-trigger.js');
-const addCrons = require('./steps/add-crons.js');
-const sendCustomResourceResponse = require('../../lib/sendCustomResourceResponse');
-const logger = require('leo-logger');
+import registerBot from './steps/register.js';
+import s3LoadTrigger from './steps/s3-load-trigger.js';
+import addCrons from './steps/add-crons.js';
+import sendCustomResourceResponse from '../../lib/sendCustomResourceResponse.js';
+import logger from 'leo-logger';
 
 exports.handler = (event, _, callback) => {
 	logger.log(JSON.stringify(event, null, 2));

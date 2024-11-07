@@ -1,7 +1,7 @@
 "use strict";
-const leo = require("leo-sdk");
+import leo from "leo-sdk";
 
-module.exports = function() {
+export default  function() {
 	let resources = leo.configuration.resources;
 	let monitorConfig = require("../../leo-monitor/package.json").config.leo.cron;
 	return Promise.all([

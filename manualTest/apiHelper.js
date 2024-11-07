@@ -2,105 +2,92 @@
  * Helper module to call the lambda functions in the correct format
  * It also handles lambda errors and api response errors for callbacks
  */
+
+const { InvokeCommand } = require("@aws-sdk/client-lambda");
+
 module.exports = function (lambdaFunctionName, lambda) {
-	function invoke(params, callback) {
-		lambda.invoke(params, function (err, response) {
-			if (!err && response && response.FunctionError) {
-				err = JSON.parse(response.Payload);
-				if (err.errorMessage) {
-					err = err.errorMessage;
-				}
-			} else if (response && response.Payload != undefined) {
-				response = JSON.parse(response.Payload);
-				if (response.status === "error") {
-					err = response.error;
-				}
-			} else {
+	// Helper function to invoke Lambda function
+	async function invoke(params) {
+		try {
+			const response = await lambda.send(new InvokeCommand(params));
+			let payload = response.Payload ? JSON.parse(new TextDecoder("utf-8").decode(response.Payload)) : null;
 
-				console.log(params, err, response);
-				response = response.Payload;
+			// Handle errors within the Lambda response payload
+			if (response.FunctionError) {
+				let error = payload.errorMessage || "Unknown Lambda function error";
+				throw new Error(error);
 			}
-
-			callback(err, response);
-		});
+			if (payload && payload.status === "error") {
+				throw new Error(payload.error || "Unknown error status in Lambda response");
+			}
+			return payload;
+		} catch (err) {
+			console.error("Lambda invoke error:", err);
+			throw err;
+		}
 	}
+
 	return {
-		start: function (id, opts, callback) {
-			if (typeof opts === "function") {
-				callback = opts;
-				opts = undefined;
-			}
-			invoke({
+		start: async function (id, opts = {}) {
+			return invoke({
 				FunctionName: lambdaFunctionName,
-				InvocationType: 'RequestResponse',
+				InvocationType: "RequestResponse",
 				Payload: JSON.stringify({
 					type: "start",
 					id: id,
-					options: opts
-				})
-			}, callback);
+					options: opts,
+				}),
+			});
 		},
-		end: function (id, status, token, opts, callback) {
-			if (typeof opts === "function") {
-				callback = opts;
-				opts = {};
-			}
-			let cp = opts.checkpoint;
+
+		end: async function (id, status, token, opts = {}) {
+			const cp = opts.checkpoint;
 			delete opts.checkpoint;
-			invoke({
+			return invoke({
 				FunctionName: lambdaFunctionName,
-				InvocationType: 'RequestResponse',
+				InvocationType: "RequestResponse",
 				Payload: JSON.stringify({
 					type: "end",
 					id: id,
 					token: token,
 					status: status,
 					checkpoint: cp,
-					options: opts
-				})
-			}, callback);
+					options: opts,
+				}),
+			});
 		},
-		read: function (id, queue, opts, callback) {
-			if (typeof opts === "function") {
-				callback = opts;
-				opts = undefined;
-			}
-			invoke({
+
+		read: async function (id, queue, opts = {}) {
+			return invoke({
 				FunctionName: lambdaFunctionName,
-				InvocationType: 'RequestResponse',
+				InvocationType: "RequestResponse",
 				Payload: JSON.stringify({
 					type: "read",
 					id: id,
 					queue: queue,
-					options: opts
-				})
-			}, callback);
+					options: opts,
+				}),
+			});
 		},
-		write: function (id, queue, events, opts, callback) {
-			if (typeof opts === "function") {
-				callback = opts;
-				opts = undefined;
-			}
-			invoke({
+
+		write: async function (id, queue, events, opts = {}) {
+			return invoke({
 				FunctionName: lambdaFunctionName,
-				InvocationType: 'RequestResponse',
+				InvocationType: "RequestResponse",
 				Payload: JSON.stringify({
 					type: "write",
 					id: id,
 					queue: queue,
 					events: events,
-					options: opts
-				})
-			}, callback);
+					options: opts,
+				}),
+			});
 		},
-		checkpoint: function (id, queue, eid, opts, callback) {
-			if (typeof opts === "function") {
-				callback = opts;
-				opts = {};
-			}
-			invoke({
+
+		checkpoint: async function (id, queue, eid, opts = {}) {
+			return invoke({
 				FunctionName: lambdaFunctionName,
-				InvocationType: 'RequestResponse',
+				InvocationType: "RequestResponse",
 				Payload: JSON.stringify({
 					type: "checkpoint",
 					id: id,
@@ -111,9 +98,9 @@ module.exports = function (lambdaFunctionName, lambda) {
 					ended_timestamp: Date.now(),
 					units: opts.units,
 					force: true,
-					options: opts
-				})
-			}, callback);
-		}
+					options: opts,
+				}),
+			});
+		},
 	};
 };

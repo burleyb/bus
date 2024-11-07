@@ -2,7 +2,7 @@ let fs = require("fs");
 let path = require("path");
 let _extend = require("extend");
 let extend = (a, b) => _extend(true, {}, a, b);
-module.exports = function(buildDir, newCloudformation, done) {
+module.exports = async function(buildDir, newCloudformation) {
 
 	// Enable TTL for LeoStream Table
 	// Default TTL is 7 days.  Can be overriden in the CF template
@@ -201,7 +201,7 @@ module.exports = function(buildDir, newCloudformation, done) {
 		});
 
 	fs.writeFileSync(path.resolve(buildDir, "legacy-cloudformation.json"), output);
-	done();
+
 };
 
 function createCloudformationParameterGroups(newCloudformation) {
