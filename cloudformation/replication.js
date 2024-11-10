@@ -38,26 +38,6 @@ module.exports = {
 		}
 	},
 	Resources: {
-		"IsReplicatingStackCondition": { //NOTE: This is an extra condition for the bot. The remaining details will be added during the build.
-			"Type": "Custom::RegisterReplicationBots",
-			"Condition": "IsReplicatingStack"
-		},
-		"RegisterReplicationBots": {
-			"Type": "Custom::RegisterReplicationBots",
-			"Condition": "IsReplicatingStack",
-			"Properties": {
-				"QueueReplicationDestinationLeoBotRoleARNs": { "Ref": "QueueReplicationDestinationLeoBotRoleARNs"},
-				"QueueReplicationMapping": { "Ref": "QueueReplicationMapping"},
-				"ReplicatorLambdaName": { "Fn::GetAtt": ["SourceQueueReplicator", "Arn"] },
-				"ServiceToken": {
-					"Fn::Sub": "${LeoCreateReplicationBots.Arn}"
-				},
-				"Version": "1.0"
-			},
-			"DependsOn": [
-				"LeoCreateReplicationBots", "SourceQueueReplicator", "LeoInstallRole"
-			]
-		},
 		"SourceQueueReplicatorRole": {
 			"Type": "AWS::IAM::Role",
 			"Condition": "IsReplicatingStack",
@@ -107,16 +87,33 @@ module.exports = {
 				]
 			}
 		},
+		"RegisterReplicationBots": {
+			"Type": "Custom::RegisterReplicationBots",
+			"Condition": "IsReplicatingStack",
+			"Properties": {
+				"QueueReplicationDestinationLeoBotRoleARNs": { "Ref": "QueueReplicationDestinationLeoBotRoleARNs"},
+				"QueueReplicationMapping": { "Ref": "QueueReplicationMapping"},
+				"ReplicatorLambdaName": { "Fn::GetAtt": ["SourceQueueReplicator", "Arn"] },
+				"ServiceToken": {
+					"Fn::Sub": "${LeoCreateReplicationBots.Arn}"
+				},
+				"Version": "1.0"
+			},
+			"DependsOn": [
+				"LeoCreateReplicationBots", "SourceQueueReplicator", "LeoInstallRole"
+			]
+		},		
+		"IsReplicatingStackCondition": { //NOTE: This is an extra condition for the bot. The remaining details will be added during the build.
+			"Type": "Custom::RegisterReplicationBots",
+			"Condition": "IsReplicatingStack"
+		},	
 	},
 	Outputs: {
 		"SourceQueueReplicator": {
 			"Description": "Leo Source Queue Replicator Bot",
 			"Condition": "IsReplicatingStack",
 			"Value": {
-				"Fn::GetAtt": [
-            		"SourceQueueReplicatorRole",
-            		"Arn"
-        		]
+        		"Fn::Sub": "${SourceQueueReplicator.Arn}"
 			},
 			"Export": {
 				"Name": {
