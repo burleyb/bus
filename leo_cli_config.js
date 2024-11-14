@@ -10,7 +10,7 @@ module.exports = {
 	}],
 	deploy: {
 		DEV: {
-			stack: 'LeoDevV2-Bus',
+			stack: 'RstreamsDEV',
 			parameters: {
 				TrustedAWSPrinciples: '',
 				QueueReplicationDestinationLeoBotRoleARNs: '',
