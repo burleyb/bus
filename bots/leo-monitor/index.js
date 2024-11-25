@@ -1,11 +1,11 @@
-"use strict";
-var leo = require("leo-sdk");
-var AWS = require("aws-sdk");
+import { unmarshall } from "@aws-sdk/util-dynamodb";
+import leo from "leo-sdk";
+import cron from "leo-sdk/wrappers/cron";
 
 const ID = "leo_cron_monitor";
 
 exports.handler = function(event, context, callback) {
-	// refreshCredentials().then(() => {
+
 	var loader = leo.load(ID, "monitor", { partitionHashKey: process.env.SHARD_HASH_KEY });
 	event.Records.forEach((record) => {
 		let now = record.dynamodb.ApproximateCreationDateTime * 1000;
@@ -17,14 +17,15 @@ exports.handler = function(event, context, callback) {
 			trigger: 0,
 			invokeTime: 0
 		};
+
 		if ("NewImage" in record.dynamodb) {
-			newImage = AWS.DynamoDB.Converter.unmarshall(record.dynamodb.NewImage);
+		  newImage = unmarshall(record.dynamodb.NewImage);
 		}
 		if ("OldImage" in record.dynamodb) {
-			oldImage = AWS.DynamoDB.Converter.unmarshall(record.dynamodb.OldImage);
+		  oldImage = unmarshall(record.dynamodb.OldImage);
 		}
 
-		if (newImage.id == ID || newImage.ignoreMonitor === true) {
+		if (newImage.id === ID || newImage.ignoreMonitor === true) {
 			return;
 		}
 
@@ -55,14 +56,14 @@ exports.handler = function(event, context, callback) {
 		}
 
 		// Check for Checkpoint Read Events
-		if (newImage.checkpoints && newImage.checkpoints.read) {
+		if (newImage.checkpoints?.read) {
 			Object.keys(newImage.checkpoints.read).forEach(event => {
 				var newCheckpoint = newImage.checkpoints.read[event];
 				var oldCheckpoint = oldImage && oldImage.checkpoints &&
 					oldImage.checkpoints.read && oldImage.checkpoints.read[event] &&
 					oldImage.checkpoints.read[event].checkpoint;
 
-				if (oldCheckpoint != newCheckpoint.checkpoint && typeof newCheckpoint.records != undefined) {
+				if (oldCheckpoint !== newCheckpoint.checkpoint && typeof newCheckpoint.records !== undefined) {
 					loader.write({
 						id: newImage.id,
 						type: 'read',
@@ -78,13 +79,13 @@ exports.handler = function(event, context, callback) {
 		}
 
 		//CHeck for Checkpoint Writes
-		if (newImage.checkpoints && newImage.checkpoints.write) {
+		if (newImage.checkpoints?.write) {
 			Object.keys(newImage.checkpoints.write).forEach(event => {
 				var newCheckpoint = newImage.checkpoints.write[event];
 				var oldCheckpoint = oldImage && oldImage.checkpoints &&
 					oldImage.checkpoints.write && oldImage.checkpoints.write[event] &&
 					oldImage.checkpoints.write[event].checkpoint;
-				if (oldCheckpoint != newCheckpoint.checkpoint && typeof newCheckpoint.records != undefined) {
+				if (oldCheckpoint !== newCheckpoint.checkpoint && typeof newCheckpoint.records !== undefined) {
 					loader.write({
 						id: newImage.id,
 						type: 'write',
@@ -100,57 +101,7 @@ exports.handler = function(event, context, callback) {
 		}
 	});
 	loader.end(callback);
-	// });
+
 };
 
-// var hasCredentials = false;
 
-// function refreshCredentials() {
-// 	return Promise.resolve();
-// 	if (!hasCredentials || AWS.config.credentials.needsRefresh() || AWS.config.credentials.expireTime.getTime() < (Date.now() + 60 * 5)) {
-// 		return new Promise((resolve, reject) => {
-// 			https.request({
-// 				hostname: 'api.leoplatform.com',
-// 				port: 443,
-// 				path: '/monitorCredentials',
-// 				method: 'POST'
-// 			}, (res) => {
-// 				console.log('statusCode', res.statusCode);
-// 				console.log('headers', res.headers);
-// 				var data = '';
-// 				res.on('data', (d) => {
-// 					data += d;
-// 				});
-// 				res.on('end', () => {
-// 					console.log(JSON.parse(data));
-// 					AWS.config.credentials = new AWS.CognitoIdentityCredentials({
-// 						IdentityPoolId: data.IdentityPoolId,
-// 						IdentityId: data.IdentityId,
-// 						Logins: {
-// 							'cognito-identity.amazonaws.com': data.Token
-// 						}
-// 					});
-// 					AWS.config.credentials.get(resolve);
-// 				});
-// 			}).end(querystring.stringify({
-
-// 			}));
-
-// 			//This should go on the server side
-// 			// AWS.config.update({
-// 			// 	region: 'us-west-2'
-// 			// });
-// 			// var cognitoidentity = new AWS.CognitoIdentity();
-// 			// cognitoidentity.getOpenIdTokenForDeveloperIdentity({
-// 			// 	IdentityPoolId: 'us-west-2:aa1428e4-3b13-4dc2-ac73-e2f8c9e5a3b4',
-// 			// 	Logins: {
-// 			// 		'login.leo': '1'
-// 			// 	}
-// 			// }, (err, data) => {
-// 			// 	//'us-west-2:aa1428e4-3b13-4dc2-ac73-e2f8c9e5a3b4',
-// 			// });
-// 		});
-// 	} else {
-// 		return Promise.resolve();
-// 	}
-// }

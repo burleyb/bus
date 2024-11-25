@@ -43,7 +43,7 @@ async function setDDBValue(id, field, value, sequence, onErrorIncrementValue = 1
 				":sequence": sequence
 			},
 			ConditionExpression: "attribute_not_exists(#field) OR #field < :value OR (#sequence = :sequence AND #field = :value)"
-		}).promise();
+		});
 		returnValue = dbValue.Attributes
 	} catch (err) {
 		console.log(id, "Got Initial Update Error:", err);
@@ -67,7 +67,7 @@ async function setDDBValue(id, field, value, sequence, onErrorIncrementValue = 1
 						":sequence": sequence
 					},
 					ConditionExpression: "#sequence <> :sequence"
-				}).promise();
+				});
 				returnValue = dbValue.Attributes
 			} catch (err) {
 				if (err.code == "ConditionalCheckFailedException") {
@@ -80,7 +80,7 @@ async function setDDBValue(id, field, value, sequence, onErrorIncrementValue = 1
 						Key: {
 							"id": id
 						}
-					}).promise();
+					});
 					returnValue = dbValue.Item
 				} else {
 					console.log(id, "Got Increment Update Error:", err);
@@ -106,7 +106,7 @@ async function deleteDDBValue(id) {
 		Key: {
 			"id": id
 		}
-	}).promise();
+	});
 }
 
 
