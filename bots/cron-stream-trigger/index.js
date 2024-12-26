@@ -5,6 +5,15 @@ var dynamodb = leo.aws.dynamodb;
 var configuration = leo.configuration;
 
 import { unmarshall } from "@aws-sdk/util-dynamodb";
+import { 
+  DynamoDBDocumentClient, 
+  GetCommand, 
+  PutCommand, 
+  UpdateCommand, 
+  ScanCommand, 
+  BatchWriteCommand, 
+  QueryCommand 
+} from "@aws-sdk/lib-dynamodb";
 
 import moment from "moment";
 import async from "async";
@@ -45,7 +54,7 @@ function setTriggers(results) {
 	return new Promise((resolve, reject) => {
 		var now = moment.now();
 
-		async.eachLimit(results, 10, function(data, callback) {
+		async.eachLimit(results, 10, async function(data, callback) {
 			console.log(`Setting Cron trigger for ${data.id}, ${now}`);
 
 			var sets = ["#trigger = :trigger"];
@@ -66,7 +75,7 @@ function setTriggers(results) {
 				eav[`:v_${i}`] = event;
 			});
 
-			var command = {
+			var command = new UpdateCommand({
 				TableName: CRON_TABLE,
 				Key: {
 					id: data.id
@@ -75,9 +84,9 @@ function setTriggers(results) {
 				ExpressionAttributeNames: ean,
 				ExpressionAttributeValues: eav,
 				"ReturnConsumedCapacity": 'TOTAL'
-			};
-
-			dynamodb.docClient.update(command, callback);
+			});
+			
+			let res = await dynamodb.docClient.send(command);
 		}, function(err) {
 			if (err) {
 				console.log(err);
