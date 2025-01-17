@@ -27,7 +27,7 @@ async function setDDBValue(id, field, value, sequence, onErrorIncrementValue = 1
 	try {
 
 		// Update value. Assume it will work
-		let dbValue = await leo.aws.dynamodb.docClient.update({
+		let dbValue = await leo.aws.dynamodb.update({
 			TableName: leo.configuration.resources.LeoSettings,
 			Key: {
 				"id": id
@@ -51,7 +51,7 @@ async function setDDBValue(id, field, value, sequence, onErrorIncrementValue = 1
 			// Initial update didn't work. Add to the existing value and use that
 			try {
 				console.log(id, `Incrementing ${field} by ${onErrorIncrementValue}`);
-				let dbValue = await leo.aws.dynamodb.docClient.update({
+				let dbValue = await leo.aws.dynamodb.update({
 					TableName: leo.configuration.resources.LeoSettings,
 					Key: {
 						"id": id
@@ -74,7 +74,7 @@ async function setDDBValue(id, field, value, sequence, onErrorIncrementValue = 1
 					// Error because this sequence failed before and was out of order
 					// Just fetch the latest value
 					console.log(id, `Same as prev sequence ${sequence} getting current value`);
-					let dbValue = await leo.aws.dynamodb.docClient.get({
+					let dbValue = await leo.aws.dynamodb.get({
 						TableName: leo.configuration.resources.LeoSettings,
 						ConsistentRead: true,
 						Key: {
@@ -101,7 +101,7 @@ async function setDDBValue(id, field, value, sequence, onErrorIncrementValue = 1
 	return returnValue;
 }
 async function deleteDDBValue(id) {
-	await leo.aws.dynamodb.docClient.delete({
+	await leo.aws.dynamodb.delete({
 		TableName: leo.configuration.resources.LeoSettings,
 		Key: {
 			"id": id
@@ -317,7 +317,7 @@ exports.handler2 = function(event, context, callback) {
 									let checkpointCommand = cronCheckpointCommand;
 									checkpointTasks.push(function(done) {
 										console.info(JSON.stringify(checkpointCommand, null, 2));
-										leo.aws.dynamodb.docClient.update(checkpointCommand, function(err, r) {
+										leo.aws.dynamodb.update(checkpointCommand, function(err, r) {
 											if (!err) {
 												console.log("Checkpointed in Cron Table", r);
 											} else {
