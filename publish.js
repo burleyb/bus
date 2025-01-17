@@ -59,111 +59,150 @@ module.exports = async function(buildDir, newCloudformation) {
 		}
 
 		if (value.Type == "AWS::DynamoDB::Table") {
-			let group = `${key} Configuration`;
-			let billingModeName = `${key}BillingMode`;
+			if(value.Properties.BillingMode == "PAY_PER_REQUEST") {
+				let group = `${key} Configuration`;
+				let billingModeName = `${key}BillingMode`;
+
+				//Dynamically Add Billing mode Parameters
+				value.Properties.BillingMode = {
+					Ref: billingModeName
+				};
+				newCloudformation.Parameters[billingModeName] = {
+					Type: "String",
+					Default: "PROVISIONED",
+					AllowedValues: ["PROVISIONED", "PAY_PER_REQUEST"],
+					Description: `Billing Mode for ${key} dynamodb table`,
+					Group: group
+				};
+
+				newCloudformation.Parameters[`${key}MinReadCapacity`] = {
+					Type: "Number",
+					Default: 0,
+					Group: group
+				};
+				newCloudformation.Parameters[`${key}MaxReadCapacity`] = {
+					Type: "Number",
+					Default: 0,
+					Group: group
+				};
+				newCloudformation.Parameters[`${key}MinWriteCapacity`] = {
+					Type: "Number",
+					Default: 0,
+					Group: group
+				};
+				newCloudformation.Parameters[`${key}MaxWriteCapacity`] = {
+					Type: "Number",
+					Default: 0,
+					Group: group
+				};				
+
+			} else {
+				let group = `${key} Configuration`;
+				let billingModeName = `${key}BillingMode`;
 
 
-			//Dynamically Add Billing mode Parameters
-			value.Properties.BillingMode = {
-				Ref: billingModeName
-			};
-			newCloudformation.Parameters[billingModeName] = {
-				Type: "String",
-				Default: "PROVISIONED",
-				AllowedValues: ["PROVISIONED", "PAY_PER_REQUEST"],
-				Description: `Billing Mode for ${key} dynamodb table`,
-				Group: group
-			};
+				//Dynamically Add Billing mode Parameters
+				value.Properties.BillingMode = {
+					Ref: billingModeName
+				};
+				newCloudformation.Parameters[billingModeName] = {
+					Type: "String",
+					Default: "PROVISIONED",
+					AllowedValues: ["PROVISIONED", "PAY_PER_REQUEST"],
+					Description: `Billing Mode for ${key} dynamodb table`,
+					Group: group
+				};
 
-			// Add a condition to check if autoscaling is used
-			let autoScalingConditionName = `${key}HasAutoScaling`;
-			newCloudformation.Conditions[autoScalingConditionName] = {
-				"Fn::Equals": [
-					{
-						"Ref": billingModeName
-					},
-					"PROVISIONED"
-				]
-			}
-
-			// Dynamically add autoscaling Min/Max Read/Write Capacity parameters
-			let readDefaultCapacity = {
-				Properties: {
-					MinCapacity: value.Properties.ProvisionedThroughput.ReadCapacityUnits || 5,
-					MaxCapacity: (value.Properties.ProvisionedThroughput.ReadCapacityUnits || 5) * 10
-				}
-			};
-			let writeDefaultCapacity = {
-				Properties: {
-					MinCapacity: value.Properties.ProvisionedThroughput.WriteCapacityUnits || 5,
-					MaxCapacity: (value.Properties.ProvisionedThroughput.WriteCapacityUnits || 5) * 10
-				}
-			};
-			let write = newCloudformation.Resources[`${key}WriteCapacityScalableTarget`] || writeDefaultCapacity;
-			let read = newCloudformation.Resources[`${key}ReadCapacityScalableTarget`] || readDefaultCapacity;
-
-			newCloudformation.Parameters[`${key}MinReadCapacity`] = {
-				Type: "Number",
-				Default: read.Properties.MinCapacity,
-				Group: group
-			};
-			newCloudformation.Parameters[`${key}MaxReadCapacity`] = {
-				Type: "Number",
-				Default: read.Properties.MaxCapacity,
-				Group: group
-			};
-			newCloudformation.Parameters[`${key}MinWriteCapacity`] = {
-				Type: "Number",
-				Default: write.Properties.MinCapacity,
-				Group: group
-			};
-			newCloudformation.Parameters[`${key}MaxWriteCapacity`] = {
-				Type: "Number",
-				Default: write.Properties.MaxCapacity,
-				Group: group
-			};
-
-			read.Properties.MaxCapacity = {
-				Ref: `${key}MaxReadCapacity`
-			}
-			read.Properties.MinCapacity = {
-				Ref: `${key}MinReadCapacity`
-			}
-
-			write.Properties.MaxCapacity = {
-				Ref: `${key}MaxWriteCapacity`
-			}
-			write.Properties.MinCapacity = {
-				Ref: `${key}MinWriteCapacity`
-			}
-
-			let writeScalePolicy = newCloudformation.Resources[`${key}WriteAutoScalingPolicy`];
-			let readScalePolicy = newCloudformation.Resources[`${key}ReadAutoScalingPolicy`];
-
-			// Attach the autoscaling condition to the autoscaling resources
-			write.Condition = autoScalingConditionName;
-			read.Condition = autoScalingConditionName;
-			if (writeScalePolicy) {
-				writeScalePolicy.Condition = autoScalingConditionName
-			}
-			if (readScalePolicy) {
-				readScalePolicy.Condition = autoScalingConditionName
-			}
-
-			value.Properties.ProvisionedThroughput = {
-				"Fn::If": [
-					autoScalingConditionName, {
-						ReadCapacityUnits: {
-							Ref: `${key}MinReadCapacity`
+				// Add a condition to check if autoscaling is used
+				let autoScalingConditionName = `${key}HasAutoScaling`;
+				newCloudformation.Conditions[autoScalingConditionName] = {
+					"Fn::Equals": [
+						{
+							"Ref": billingModeName
 						},
-						WriteCapacityUnits: {
-							Ref: `${key}MinWriteCapacity`
-						}
-					}, {
-						Ref: "AWS::NoValue"
+						"PROVISIONED"
+					]
+				}
+
+				// Dynamically add autoscaling Min/Max Read/Write Capacity parameters
+				let readDefaultCapacity = {
+					Properties: {
+						MinCapacity: value.Properties.ProvisionedThroughput.ReadCapacityUnits || 5,
+						MaxCapacity: (value.Properties.ProvisionedThroughput.ReadCapacityUnits || 5) * 10
 					}
-				]
-			};
+				};
+				let writeDefaultCapacity = {
+					Properties: {
+						MinCapacity: value.Properties.ProvisionedThroughput.WriteCapacityUnits || 5,
+						MaxCapacity: (value.Properties.ProvisionedThroughput.WriteCapacityUnits || 5) * 10
+					}
+				};
+				let write = newCloudformation.Resources[`${key}WriteCapacityScalableTarget`] || writeDefaultCapacity;
+				let read = newCloudformation.Resources[`${key}ReadCapacityScalableTarget`] || readDefaultCapacity;
+
+				newCloudformation.Parameters[`${key}MinReadCapacity`] = {
+					Type: "Number",
+					Default: read.Properties.MinCapacity,
+					Group: group
+				};
+				newCloudformation.Parameters[`${key}MaxReadCapacity`] = {
+					Type: "Number",
+					Default: read.Properties.MaxCapacity,
+					Group: group
+				};
+				newCloudformation.Parameters[`${key}MinWriteCapacity`] = {
+					Type: "Number",
+					Default: write.Properties.MinCapacity,
+					Group: group
+				};
+				newCloudformation.Parameters[`${key}MaxWriteCapacity`] = {
+					Type: "Number",
+					Default: write.Properties.MaxCapacity,
+					Group: group
+				};
+
+				read.Properties.MaxCapacity = {
+					Ref: `${key}MaxReadCapacity`
+				}
+				read.Properties.MinCapacity = {
+					Ref: `${key}MinReadCapacity`
+				}
+
+				write.Properties.MaxCapacity = {
+					Ref: `${key}MaxWriteCapacity`
+				}
+				write.Properties.MinCapacity = {
+					Ref: `${key}MinWriteCapacity`
+				}
+
+				let writeScalePolicy = newCloudformation.Resources[`${key}WriteAutoScalingPolicy`];
+				let readScalePolicy = newCloudformation.Resources[`${key}ReadAutoScalingPolicy`];
+
+				// Attach the autoscaling condition to the autoscaling resources
+				write.Condition = autoScalingConditionName;
+				read.Condition = autoScalingConditionName;
+				if (writeScalePolicy) {
+					writeScalePolicy.Condition = autoScalingConditionName
+				}
+				if (readScalePolicy) {
+					readScalePolicy.Condition = autoScalingConditionName
+				}
+
+				value.Properties.ProvisionedThroughput = {
+					"Fn::If": [
+						autoScalingConditionName, {
+							ReadCapacityUnits: {
+								Ref: `${key}MinReadCapacity`
+							},
+							WriteCapacityUnits: {
+								Ref: `${key}MinWriteCapacity`
+							}
+						}, {
+							Ref: "AWS::NoValue"
+						}
+					]
+				};
+			}
 		}
 	});
 	createCloudformationParameterGroups(newCloudformation);
