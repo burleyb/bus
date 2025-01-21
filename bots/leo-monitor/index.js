@@ -25,7 +25,7 @@ exports.handler = function(event, context, callback) {
 		  oldImage = unmarshall(record.dynamodb.OldImage);
 		}
 
-		if (newImage.id === ID || newImage.ignoreMonitor === true) {
+		if (newImage.id == ID || newImage.ignoreMonitor === true) {
 			return;
 		}
 
@@ -63,7 +63,7 @@ exports.handler = function(event, context, callback) {
 					oldImage.checkpoints.read && oldImage.checkpoints.read[event] &&
 					oldImage.checkpoints.read[event].checkpoint;
 
-				if (oldCheckpoint !== newCheckpoint.checkpoint && typeof newCheckpoint.records !== undefined) {
+				if (oldCheckpoint != newCheckpoint.checkpoint && typeof newCheckpoint.records != undefined) {
 					loader.write({
 						id: newImage.id,
 						type: 'read',
@@ -85,7 +85,7 @@ exports.handler = function(event, context, callback) {
 				var oldCheckpoint = oldImage && oldImage.checkpoints &&
 					oldImage.checkpoints.write && oldImage.checkpoints.write[event] &&
 					oldImage.checkpoints.write[event].checkpoint;
-				if (oldCheckpoint !== newCheckpoint.checkpoint && typeof newCheckpoint.records !== undefined) {
+				if (oldCheckpoint != newCheckpoint.checkpoint && typeof newCheckpoint.records != undefined) {
 					loader.write({
 						id: newImage.id,
 						type: 'write',

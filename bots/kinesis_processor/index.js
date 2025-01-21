@@ -1,29 +1,3 @@
-/**
- * AWS cloudwatch query and script to determine incoming sizes per queue
- * Query: "shardId-0000" size
- * Script: 
- * (function go(shardid, size, queueSize){
-		let a = Array.from(document.querySelectorAll("tbody tr")).map(r=>{ 
-			let [_, shardid, bytes, obj] = r.innerText.match(/shardId-(\d+) (\d+) (.*)\t/)||[null, "", "0", "{}"]; 
-			let date = r.innerText.match(/\t(.*?)\t/)[1];
-			let objParsed = obj.split(/[,{}]/).map(s=>s.trim().split(":")).filter(a=>a.length>1).reduce((all, one)=>{ all[one[0].replace(/'/g,"")]=parseInt(one[1]); return all},{}); 
-			return {date, shardid, bytes:parseInt(bytes), obj: objParsed};
-		}).filter(b=>(shardid == null || b.shardid == shardid) && (size == null || b.bytes >= size));
-
-		let out = [];
-		a.forEach(b=>Object.entries(b.obj).filter(([queue, bytes])=>queueSize== null || bytes >= queueSize).forEach(([queue, size])=>out.push(b.date+"\t"+queue+"\t"+Math.round(size/1000))));
-		console.log(out.join("\n"))
-	})("000000000001", null, 100000)
- * 
- * Excel: 
- * 	Paste results into a spreadsheet with header date, queue, size
- * 	Create a Pivot Table and Pivot Chart
- * 		Axis: date
- * 		Legend: queue
- * 		Values: size
- */
-
-
 "use strict";
 const moment = require("moment");
 const zlib = require("zlib");
@@ -42,6 +16,19 @@ const EventTable = leo.configuration.resources.LeoEvent;
 const CronTable = leo.configuration.resources.LeoCron;
 const ttlSeconds = parseInt(process.env.ttlSeconds) || 604800; // Seconds in a week
 
+import { 
+    GetCommand,
+    PutCommand,
+    UpdateCommand,
+    DeleteCommand,
+    QueryCommand,
+    ScanCommand,
+    BatchGetCommand,
+    BatchWriteCommand,
+    TransactGetCommand,
+    TransactWriteCommand
+} from "@aws-sdk/lib-dynamodb";
+
 
 async function setDDBValue(id, field, value, sequence, onErrorIncrementValue = 1) {
 
@@ -53,7 +40,7 @@ async function setDDBValue(id, field, value, sequence, onErrorIncrementValue = 1
 	try {
 
 		// Update value. Assume it will work
-		let dbValue = await leo.aws.dynamodb.update({
+		let dbValue = await leo.aws.dynamodb.docClient.send(new UpdateCommand({
 			TableName: leo.configuration.resources.LeoSettings,
 			Key: {
 				"id": id
@@ -69,7 +56,7 @@ async function setDDBValue(id, field, value, sequence, onErrorIncrementValue = 1
 				":sequence": sequence
 			},
 			ConditionExpression: "attribute_not_exists(#field) OR #field < :value OR (#sequence = :sequence AND #field = :value)"
-		});
+		}));
 		returnValue = dbValue.Attributes
 	} catch (err) {
 		console.log(id, "Got Initial Update Error:", err);
@@ -77,7 +64,7 @@ async function setDDBValue(id, field, value, sequence, onErrorIncrementValue = 1
 			// Initial update didn't work. Add to the existing value and use that
 			try {
 				console.log(id, `Incrementing ${field} by ${onErrorIncrementValue}`);
-				let dbValue = await leo.aws.dynamodb.update({
+				let dbValue = await leo.aws.dynamodb.docClient.send(new UpdateCommand({
 					TableName: leo.configuration.resources.LeoSettings,
 					Key: {
 						"id": id
@@ -93,20 +80,20 @@ async function setDDBValue(id, field, value, sequence, onErrorIncrementValue = 1
 						":sequence": sequence
 					},
 					ConditionExpression: "#sequence <> :sequence"
-				});
+				}));
 				returnValue = dbValue.Attributes
 			} catch (err) {
 				if (err.code == "ConditionalCheckFailedException") {
 					// Error because this sequence failed before and was out of order
 					// Just fetch the latest value
 					console.log(id, `Same as prev sequence ${sequence} getting current value`);
-					let dbValue = await leo.aws.dynamodb.get({
+					let dbValue = await leo.aws.dynamodb.docClient.send( new GetCommand({
 						TableName: leo.configuration.resources.LeoSettings,
 						ConsistentRead: true,
 						Key: {
 							"id": id
 						}
-					});
+					}));
 					returnValue = dbValue.Item
 				} else {
 					console.log(id, "Got Increment Update Error:", err);
@@ -127,12 +114,12 @@ async function setDDBValue(id, field, value, sequence, onErrorIncrementValue = 1
 	return returnValue;
 }
 async function deleteDDBValue(id) {
-	await leo.aws.dynamodb.delete({
+	await leo.aws.dynamodb.docClient.send(new DeleteCommand({
 		TableName: leo.configuration.resources.LeoSettings,
 		Key: {
 			"id": id
 		}
-	});
+	}));
 }
 
 
@@ -341,20 +328,20 @@ exports.handler2 = function(event, context, callback) {
 								if (updates.length > 0) {
 									cronCheckpointCommand.UpdateExpression = `set ${updates.join(", ")}`;
 									let checkpointCommand = cronCheckpointCommand;
-									checkpointTasks.push(function(done) {
+									checkpointTasks.push(async function() {
 										console.info(JSON.stringify(checkpointCommand, null, 2));
-										leo.aws.dynamodb.update(checkpointCommand, function(err, r) {
-											if (!err) {
-												console.log("Checkpointed in Cron Table", r);
-											} else {
+										try {
+											const r = await leo.aws.dynamodb.docClient.send( new UpdateCommand(checkpointCommand) )
+											console.log("Checkpointed in Cron Table", r);
+										} catch (err) {
 												// TODO: On error it should check to see if the bot id exists and try to created it if needed
 												// See lib/cron.checkpoint
 												console.error("Error checkpointing write, skipping.", err);
-											}
-											done();
-										});
+										}
+
 									});
-								}
+								};
+							
 								cronCheckpointCommand = {
 									TableName: CronTable,
 									Key: {
