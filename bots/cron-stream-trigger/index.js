@@ -86,7 +86,11 @@ function setTriggers(results) {
 				"ReturnConsumedCapacity": 'TOTAL'
 			});
 			
-			let res = await dynamodb.docClient.send(command);
+			dynamodb.docClient.send(command)
+			.then(res =>{
+				console.log(`Trigger set for ${data.id}`);
+				callback(null, res)
+			});
 		}, function(err) {
 			if (err) {
 				console.log(err);
