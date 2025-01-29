@@ -326,22 +326,26 @@ exports.handler2 = function(event, context, callback) {
 
 							function flushCurrentBotCPs() {
 								if (updates.length > 0) {
-									cronCheckpointCommand.UpdateExpression = `set ${updates.join(", ")}`;
+									cronCheckpointCommand.UpdateExpression = `SET ${updates.join(", ")}`;
 									let checkpointCommand = cronCheckpointCommand;
 									checkpointTasks.push(async function() {
-										console.info(JSON.stringify(checkpointCommand, null, 2));
 										try {
-											const r = await leo.aws.dynamodb.docClient.send( new UpdateCommand(checkpointCommand) )
+											const r = await leo.aws.dynamodb.docClient.send(new UpdateCommand(checkpointCommand));
 											console.log("Checkpointed in Cron Table", r);
 										} catch (err) {
-												// TODO: On error it should check to see if the bot id exists and try to created it if needed
-												// See lib/cron.checkpoint
-												console.error("Error checkpointing write, skipping.", err);
+											try {
+												// Create the bot if it doesn't exist
+												await leo.bot.createBot(bot, { name: bot });
+												// Retry the update after creating the bot
+												const r = await leo.aws.dynamodb.docClient.send(new UpdateCommand(checkpointCommand));
+												console.log("Checkpointed in Cron Table after creating bot", r);
+											} catch (createErr) {
+												console.error("Error creating bot and checkpointing write, skipping.", createErr);
+											}
 										}
-
 									});
-								};
-							
+								}
+
 								cronCheckpointCommand = {
 									TableName: CronTable,
 									Key: {
@@ -382,6 +386,7 @@ exports.handler2 = function(event, context, callback) {
 							}
 							flushCurrentBotCPs();
 						}
+
 						console.log("checkpointing");
 						async.parallelLimit(checkpointTasks, 100, function(err) {
 							if (err) {
@@ -392,6 +397,9 @@ exports.handler2 = function(event, context, callback) {
 								callback(null, "Successfully processed " + event.Records.length + " records.");
 							}
 						});
+
+
+
 					}
 				});
 			}
