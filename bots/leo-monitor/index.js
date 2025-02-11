@@ -7,7 +7,7 @@ const ID = "leo_cron_monitor";
 exports.handler = function(event, context, callback) {
 
 	var loader = leo.load(ID, "monitor", { partitionHashKey: process.env.SHARD_HASH_KEY });
-	event.Records.forEach((record) => {
+	event?.Records.forEach((record) => {
 		let now = record.dynamodb.ApproximateCreationDateTime * 1000;
 		var newImage = {
 			trigger: 0,
